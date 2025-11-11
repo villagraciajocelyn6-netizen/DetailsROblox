@@ -502,7 +502,7 @@
         </div>
 
         <div class="api-info">
-            📡 API Endpoint: <code>POST /api/search</code>
+            📡 Client-Side API - Direct Roblox Connection
         </div>
 
         <div class="input-group">
@@ -571,6 +571,8 @@
     </div>
 
     <script>
+        const PROXY = 'https://corsproxy.io/?';
+
         function createStars() {
             const starsContainer = document.getElementById('stars');
             const numberOfStars = 200;
@@ -638,37 +640,53 @@
             searchBtn.disabled = true;
 
             try {
-                // Call our serverless function API
-                const response = await fetch('/.netlify/functions/search', {
+                // Get user info
+                const userResponse = await fetch(PROXY + 'https://users.roblox.com/v1/usernames/users', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ username: username })
+                    body: JSON.stringify({
+                        usernames: [username],
+                        excludeBannedUsers: false
+                    })
                 });
 
-                const data = await response.json();
+                const userData = await userResponse.json();
 
-                if (!response.ok || data.error) {
-                    showError(data.error || 'User not found. Please check the username and try again.');
+                if (!userData.data || userData.data.length === 0) {
+                    showError('User not found. Please check the username and try again.');
                     return;
                 }
 
+                const user = userData.data[0];
+                const userIdValue = user.id;
+
+                // Fetch additional data in parallel
+                const [avatarData, friendsData, followersData, followingData, robuxData] = await Promise.allSettled([
+                    fetch(PROXY + `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIdValue}&size=150x150&format=Png&isCircular=false`).then(r => r.json()),
+                    fetch(PROXY + `https://friends.roblox.com/v1/users/${userIdValue}/friends/count`).then(r => r.json()),
+                    fetch(PROXY + `https://friends.roblox.com/v1/users/${userIdValue}/followers/count`).then(r => r.json()),
+                    fetch(PROXY + `https://friends.roblox.com/v1/users/${userIdValue}/followings/count`).then(r => r.json()),
+                    fetch(PROXY + `https://economy.roblox.com/v1/users/${userIdValue}/currency`).then(r => r.json())
+                ]);
+
                 // Display results
-                displayUsername.textContent = data.username;
-                userId.textContent = data.userId;
-                displayName.textContent = data.displayName;
+                displayUsername.textContent = user.name;
+                userId.textContent = userIdValue;
+                displayName.textContent = user.displayName;
                 
-                if (data.avatarUrl) {
-                    avatar.src = data.avatarUrl;
+                if (avatarData.status === 'fulfilled' && avatarData.value.data?.[0]?.imageUrl) {
+                    avatar.src = avatarData.value.data[0].imageUrl;
                     avatar.classList.add('show');
                 }
 
                 // Display stats
-                robuxCount.textContent = data.robux !== null ? (typeof data.robux === 'number' ? data.robux.toLocaleString() : data.robux) : '-';
-                friendsCount.textContent = data.friends !== null ? data.friends.toLocaleString() : '-';
-                followersCount.textContent = data.followers !== null ? data.followers.toLocaleString() : '-';
-                followingCount.textContent = data.following !== null ? data.following.toLocaleString() : '-';
+                const robuxValue = robuxData.status === 'fulfilled' && robuxData.value.robux !== undefined ? robuxData.value.robux : 'Private';
+                robuxCount.textContent = typeof robuxValue === 'number' ? robuxValue.toLocaleString() : robuxValue;
+                friendsCount.textContent = friendsData.status === 'fulfilled' ? friendsData.value.count.toLocaleString() : '-';
+                followersCount.textContent = followersData.status === 'fulfilled' ? followersData.value.count.toLocaleString() : '-';
+                followingCount.textContent = followingData.status === 'fulfilled' ? followingData.value.count.toLocaleString() : '-';
 
                 resultContainer.classList.add('show');
                 copyBtn.style.display = 'inline-flex';
@@ -676,7 +694,7 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showError('Unable to connect to server. Please try again.');
+                showError('Unable to fetch data. Please try again.');
             } finally {
                 loading.classList.remove('show');
                 searchBtn.disabled = false;
