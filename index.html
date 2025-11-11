@@ -457,6 +457,42 @@
             transform: scale(0.95);
         }
 
+        .debug-log {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .debug-log.show {
+            display: block;
+        }
+
+        .debug-toggle {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .debug-toggle:hover {
+            color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
         @media (max-width: 480px) {
             body {
                 padding: 20px 15px;
@@ -495,19 +531,19 @@
     <div class="container">
         <div class="header">
             <div class="icon">
-                <img src="image.png" alt="icon">
+                <img src="image.png" alt="icon" onerror="this.style.display='none'">
             </div>
             <h1>Roblox Finder</h1>
             <p>Discover user information instantly</p>
         </div>
 
         <div class="api-info">
-            📡 Client-Side API - Direct Roblox Connection
+            📡 Smart Proxy - Auto-Routing Connection
         </div>
 
         <div class="input-group">
             <div class="input-wrapper">
-                <input type="text" id="usernameInput" placeholder="Enter username" autocomplete="off">
+                <input type="text" id="usernameInput" placeholder="Enter username (e.g., Builderman)" autocomplete="off">
             </div>
             <button class="btn" id="searchBtn">Search User</button>
             <div class="error" id="errorMsg"></div>
@@ -540,39 +576,94 @@
             <div class="stats-grid" id="statsGrid" style="display: none;">
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <img src="image1.png" alt="Robux">
+                        <img src="image1.png" alt="Robux" onerror="this.parentElement.innerHTML='💰'">
                     </div>
                     <div class="stat-value" id="robuxCount">-</div>
                     <div class="stat-label">Robux</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <img src="image2.png" alt="Friends">
+                        <img src="image2.png" alt="Friends" onerror="this.parentElement.innerHTML='👥'">
                     </div>
                     <div class="stat-value" id="friendsCount">-</div>
                     <div class="stat-label">Friends</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <img src="image3.png" alt="Followers">
+                        <img src="image3.png" alt="Followers" onerror="this.parentElement.innerHTML='⭐'">
                     </div>
                     <div class="stat-value" id="followersCount">-</div>
                     <div class="stat-label">Followers</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <img src="image4.png" alt="Following">
+                        <img src="image4.png" alt="Following" onerror="this.parentElement.innerHTML='👤'">
                     </div>
                     <div class="stat-value" id="followingCount">-</div>
                     <div class="stat-label">Following</div>
                 </div>
             </div>
         </div>
+
+        <div class="debug-toggle" id="debugToggle">🔧 Toggle Debug Log</div>
+        <div class="debug-log" id="debugLog"></div>
     </div>
 
     <script>
-        const PROXY = 'https://corsproxy.io/?';
+        // Configuration - Multiple proxy options with fallback
+        const PROXY_OPTIONS = [
+            '', // Direct (no proxy)
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+        ];
+        
+        let currentProxyIndex = 0;
+        let debugEnabled = false;
 
+        // DOM Elements
+        const usernameInput = document.getElementById('usernameInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultContainer = document.getElementById('resultContainer');
+        const loading = document.getElementById('loading');
+        const errorMsg = document.getElementById('errorMsg');
+        const displayUsername = document.getElementById('displayUsername');
+        const userId = document.getElementById('userId');
+        const displayName = document.getElementById('displayName');
+        const avatar = document.getElementById('avatar');
+        const copyBtn = document.getElementById('copyBtn');
+        const statsGrid = document.getElementById('statsGrid');
+        const robuxCount = document.getElementById('robuxCount');
+        const friendsCount = document.getElementById('friendsCount');
+        const followersCount = document.getElementById('followersCount');
+        const followingCount = document.getElementById('followingCount');
+        const debugLog = document.getElementById('debugLog');
+        const debugToggle = document.getElementById('debugToggle');
+
+        // Debug logging function
+        function log(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}${data ? '' + JSON.stringify(data, null, 2) : ''}`;
+            
+            console.log(message, data || '');
+            
+            if (debugEnabled) {
+                debugLog.textContent += logEntry + '';
+                debugLog.scrollTop = debugLog.scrollHeight;
+            }
+        }
+
+        // Toggle debug log
+        debugToggle.addEventListener('click', () => {
+            debugEnabled = !debugEnabled;
+            debugLog.classList.toggle('show');
+            if (debugEnabled) {
+                log('🚀 Debug mode enabled');
+            } else {
+                debugLog.textContent = '';
+            }
+        });
+
+        // Create animated stars background
         function createStars() {
             const starsContainer = document.getElementById('stars');
             const numberOfStars = 200;
@@ -592,6 +683,7 @@
                 starsContainer.appendChild(star);
             }
 
+            // Add shooting stars
             for (let i = 0; i < 3; i++) {
                 const shootingStar = document.createElement('div');
                 shootingStar.className = 'shooting-star';
@@ -606,106 +698,213 @@
 
         createStars();
 
-        const usernameInput = document.getElementById('usernameInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const resultContainer = document.getElementById('resultContainer');
-        const loading = document.getElementById('loading');
-        const errorMsg = document.getElementById('errorMsg');
-        const displayUsername = document.getElementById('displayUsername');
-        const userId = document.getElementById('userId');
-        const displayName = document.getElementById('displayName');
-        const avatar = document.getElementById('avatar');
-        const copyBtn = document.getElementById('copyBtn');
-        const statsGrid = document.getElementById('statsGrid');
-        const robuxCount = document.getElementById('robuxCount');
-        const friendsCount = document.getElementById('friendsCount');
-        const followersCount = document.getElementById('followersCount');
-        const followingCount = document.getElementById('followingCount');
+        // Fetch with automatic proxy fallback
+        async function fetchWithProxy(url, options = {}, retryCount = 0) {
+            const proxy = PROXY_OPTIONS[currentProxyIndex];
+            const fullUrl = proxy ? proxy + encodeURIComponent(url) : url;
+            
+            log(`Attempt ${retryCount + 1}: Fetching ${url}`);
+            log(`Using proxy: ${proxy || 'None (Direct)'}`, { url: fullUrl });
+            
+            try {
+                const response = await fetch(fullUrl, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                log(`Response status: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`✓ Response received`, data);
+                return data;
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                
+                // Try next proxy if available
+                if (currentProxyIndex < PROXY_OPTIONS.length - 1) {
+                    currentProxyIndex++;
+                    log(`Switching to next proxy option...`);
+                    return fetchWithProxy(url, options, retryCount + 1);
+                }
+                
+                // Reset proxy index for next attempt
+                currentProxyIndex = 0;
+                throw new Error(`All proxy attempts failed: ${error.message}`);
+            }
+        }
 
+        // Main search function
         async function searchUser() {
             const username = usernameInput.value.trim();
             
+            // Reset UI
+            if (debugEnabled) {
+                debugLog.textContent = '';
+            }
             errorMsg.classList.remove('show');
             resultContainer.classList.remove('show');
             avatar.classList.remove('show');
             copyBtn.style.display = 'none';
             statsGrid.style.display = 'none';
             
+            // Validate input
             if (!username) {
                 showError('Please enter a username');
                 return;
             }
 
+            if (username.length < 3 || username.length > 20) {
+                showError('Username must be between 3-20 characters');
+                return;
+            }
+
+            log(`🔍 Starting search for username: "${username}"`);
             loading.classList.add('show');
             searchBtn.disabled = true;
+            currentProxyIndex = 0; // Reset proxy selection
 
             try {
-                // Get user info
-                const userResponse = await fetch(PROXY + 'https://users.roblox.com/v1/usernames/users', {
+                // Step 1: Get user info
+                log('Step 1: Fetching user data from Roblox API...');
+                const userData = await fetchWithProxy('https://users.roblox.com/v1/usernames/users', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
                     body: JSON.stringify({
                         usernames: [username],
                         excludeBannedUsers: false
                     })
                 });
 
-                const userData = await userResponse.json();
+                log('User data response:', userData);
 
-                if (!userData.data || userData.data.length === 0) {
+                // Validate response
+                if (!userData || !userData.data || !Array.isArray(userData.data)) {
+                    log('❌ Invalid response structure', userData);
+                    throw new Error('Invalid API response structure');
+                }
+
+                if (userData.data.length === 0) {
+                    log('❌ User not found in response');
                     showError('User not found. Please check the username and try again.');
                     return;
                 }
 
                 const user = userData.data[0];
+                
+                if (!user.id || !user.name) {
+                    log('❌ Missing user data', user);
+                    throw new Error('Incomplete user data received');
+                }
+
                 const userIdValue = user.id;
+                log(`✓ User found! ID: ${userIdValue}, Name: ${user.name}, Display: ${user.displayName}`);
 
-                // Fetch additional data in parallel
-                const [avatarData, friendsData, followersData, followingData, robuxData] = await Promise.allSettled([
-                    fetch(PROXY + `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIdValue}&size=150x150&format=Png&isCircular=false`).then(r => r.json()),
-                    fetch(PROXY + `https://friends.roblox.com/v1/users/${userIdValue}/friends/count`).then(r => r.json()),
-                    fetch(PROXY + `https://friends.roblox.com/v1/users/${userIdValue}/followers/count`).then(r => r.json()),
-                    fetch(PROXY + `https://friends.roblox.com/v1/users/${userIdValue}/followings/count`).then(r => r.json()),
-                    fetch(PROXY + `https://economy.roblox.com/v1/users/${userIdValue}/currency`).then(r => r.json())
-                ]);
-
-                // Display results
+                // Display basic info immediately
                 displayUsername.textContent = user.name;
                 userId.textContent = userIdValue;
-                displayName.textContent = user.displayName;
+                displayName.textContent = user.displayName || user.name;
+                resultContainer.classList.add('show');
+                copyBtn.style.display = 'inline-flex';
+
+                // Step 2: Fetch additional data in parallel
+                log('Step 2: Fetching additional user statistics...');
                 
-                if (avatarData.status === 'fulfilled' && avatarData.value.data?.[0]?.imageUrl) {
-                    avatar.src = avatarData.value.data[0].imageUrl;
+                const dataPromises = [
+                    fetchWithProxy(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIdValue}&size=150x150&format=Png&isCircular=false`)
+                        .catch(err => {
+                            log('Avatar fetch failed:', err.message);
+                            return { data: [] };
+                        }),
+                    fetchWithProxy(`https://friends.roblox.com/v1/users/${userIdValue}/friends/count`)
+                        .catch(err => {
+                            log('Friends count fetch failed:', err.message);
+                            return { count: null };
+                        }),
+                    fetchWithProxy(`https://friends.roblox.com/v1/users/${userIdValue}/followers/count`)
+                        .catch(err => {
+                            log('Followers count fetch failed:', err.message);
+                            return { count: null };
+                        }),
+                    fetchWithProxy(`https://friends.roblox.com/v1/users/${userIdValue}/followings/count`)
+                        .catch(err => {
+                            log('Following count fetch failed:', err.message);
+                            return { count: null };
+                        }),
+                    fetchWithProxy(`https://economy.roblox.com/v1/users/${userIdValue}/currency`)
+                        .catch(err => {
+                            log('Robux fetch failed (likely private):', err.message);
+                            return { robux: null };
+                        })
+                ];
+
+                const [avatarData, friendsData, followersData, followingData, robuxData] = await Promise.all(dataPromises);
+
+                log('Additional data received');
+
+                // Display avatar
+                if (avatarData.data && avatarData.data[0] && avatarData.data[0].imageUrl) {
+                    avatar.src = avatarData.data[0].imageUrl;
                     avatar.classList.add('show');
+                    log('✓ Avatar loaded');
+                } else {
+                    log('⚠ Avatar not available');
                 }
 
                 // Display stats
-                const robuxValue = robuxData.status === 'fulfilled' && robuxData.value.robux !== undefined ? robuxData.value.robux : 'Private';
+                const robuxValue = robuxData.robux !== null && robuxData.robux !== undefined ? robuxData.robux : 'Private';
                 robuxCount.textContent = typeof robuxValue === 'number' ? robuxValue.toLocaleString() : robuxValue;
-                friendsCount.textContent = friendsData.status === 'fulfilled' ? friendsData.value.count.toLocaleString() : '-';
-                followersCount.textContent = followersData.status === 'fulfilled' ? followersData.value.count.toLocaleString() : '-';
-                followingCount.textContent = followingData.status === 'fulfilled' ? followingData.value.count.toLocaleString() : '-';
+                
+                friendsCount.textContent = friendsData.count !== null ? friendsData.count.toLocaleString() : '-';
+                followersCount.textContent = followersData.count !== null ? followersData.count.toLocaleString() : '-';
+                followingCount.textContent = followingData.count !== null ? followingData.count.toLocaleString() : '-';
 
-                resultContainer.classList.add('show');
-                copyBtn.style.display = 'inline-flex';
                 statsGrid.style.display = 'grid';
 
+                log('Statistics:', {
+                    robux: robuxValue,
+                    friends: friendsData.count,
+                    followers: followersData.count,
+                    following: followingData.count
+                });
+
+                log('✅ Search completed successfully!');
+
             } catch (error) {
-                console.error('Error:', error);
-                showError('Unable to fetch data. Please try again.');
+                log('❌ Fatal error occurred:', error);
+                console.error('Search error:', error);
+                
+                let errorMessage = 'Unable to fetch data. ';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage += 'Network error - please check your connection.';
+                } else if (error.message.includes('proxy')) {
+                    errorMessage += 'Proxy connection failed. Try again or use a backend server.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                showError(errorMessage);
             } finally {
                 loading.classList.remove('show');
                 searchBtn.disabled = false;
             }
         }
 
+        // Show error message
         function showError(message) {
             errorMsg.textContent = message;
             errorMsg.classList.add('show');
+            log(`⚠ Error shown to user: ${message}`);
         }
 
+        // Copy user ID to clipboard
         copyBtn.addEventListener('click', () => {
             const id = userId.textContent;
             navigator.clipboard.writeText(id).then(() => {
@@ -714,10 +913,15 @@
                 setTimeout(() => {
                     copyBtn.textContent = originalText;
                 }, 2000);
+                log(`📋 User ID copied: ${id}`);
+            }).catch(err => {
+                log('❌ Copy failed:', err.message);
             });
         });
 
+        // Event listeners
         searchBtn.addEventListener('click', searchUser);
+        
         usernameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 searchUser();
@@ -727,6 +931,10 @@
         usernameInput.addEventListener('input', () => {
             errorMsg.classList.remove('show');
         });
+
+        // Initialize
+        log('🚀 Roblox Finder initialized');
+        log('💡 Click "Toggle Debug Log" to see detailed information');
     </script>
 </body>
 </html>
