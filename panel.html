@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KEY Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    background: #0e0e0e;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.box {
+    background: #161616;
+    padding: 25px;
+    border-radius: 10px;
+    width: 320px;
+    text-align: center;
+}
+button {
+    background: #7f00ff;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+.key {
+    font-size: 28px;
+    margin: 15px 0;
+    letter-spacing: 5px;
+}
+.link {
+    word-break: break-all;
+    font-size: 12px;
+    color: #00ffcc;
+}
+.status {
+    margin-top: 15px;
+    font-size: 18px;
+}
+.success { color: #00ff00; }
+.fail { color: #ff4444; }
+</style>
+</head>
+
+<body>
+
+<div class="box">
+    <h2>🔐 KEY SYSTEM</h2>
+
+    <button onclick="generateKey()">Generate Key</button>
+
+    <div class="key" id="key">------</div>
+    <div class="link" id="link"></div>
+
+    <div class="status" id="status"></div>
+</div>
+
+<script>
+function generateKey() {
+    const key = Math.floor(100000 + Math.random() * 900000);
+
+    document.getElementById("key").innerText = key;
+    document.getElementById("link").innerText =
+        window.location.origin + window.location.pathname + "?check=" + key;
+}
+
+/*
+  MOD VALIDATION MODE
+  Your mod loads:
+  https://your-railway.app/?check=123456
+*/
+const params = new URLSearchParams(window.location.search);
+const checkKey = params.get("check");
+
+if (checkKey) {
+    // 🔒 PUT YOUR SECRET RULE HERE
+    // Example: allow only keys starting with 7
+    if (checkKey.length === 6) {
+        document.body.innerHTML = "ACCESS_GRANTED";
+    } else {
+        document.body.innerHTML = "INVALID_KEY";
+    }
+}
+</script>
+
+</body>
+</html>
